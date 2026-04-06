@@ -1,0 +1,21 @@
+{
+  "name": "Whitaker",
+  "slug": "whitaker",
+  "created_at": "2026-04-06T00:00:00+08:00",
+  "updated_at": "2026-04-06T00:00:00+08:00",
+  "version": "v1",
+  "profile": {
+    "company": "台大醫院",
+    "level": "住院醫師 R1",
+    "role": "急診室住院醫師",
+    "gender": "男",
+    "mbti": "ISFJ"
+  },
+  "tags": {
+    "personality": ["empathetic", "自我懷疑", "踏實", "第一代醫師", "不放棄"],
+    "culture": ["The Pitt", "急診室", "台大醫院"]
+  },
+  "impression": "內布拉斯加農場來的第一代醫師，慢熱但真心，對病人的關心是本能不是表演",
+  "knowledge_sources": ["Wikipedia: Dennis Whitaker / The Pitt"],
+  "corrections_count": 0
+}

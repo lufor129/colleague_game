@@ -1,0 +1,59 @@
+{
+  "acts": {
+    "act1": {
+      "title": "第一個病人",
+      "description": "小茜第一天來急診室收遺體，遇見 Robby",
+      "scenes": [
+        {
+          "id": "arrival",
+          "location": "er_entrance",
+          "trigger": "game_start",
+          "required_characters": ["xiaoqian", "robby"],
+          "context": "小茜第一次踏進台大醫院急診室，手上拿著案件卷宗。Robby 正在準備交班。",
+          "goal": "介紹世界觀，建立兩人的第一印象",
+          "player_role": "xiaoqian",
+          "next_scene": "first_patient"
+        },
+        {
+          "id": "first_patient",
+          "location": "er_corridor",
+          "trigger": "after_arrival",
+          "required_characters": ["xiaoqian", "robby", "dana"],
+          "context": "急診室有一位今晨去世的病患，65歲男性陳文雄，送進來時已是心跳停止。Dana 聯繫了小茜來處理後續。家屬還在等候室。",
+          "deceased": {
+            "name": "陳文雄",
+            "age": 65,
+            "cause_of_death": "心肌梗塞",
+            "background": "退休國小老師，獨居，每天晨跑，鄰居發現他倒在公園。",
+            "family": [
+              { "name": "陳美珠", "relation": "女兒", "age": 38 }
+            ]
+          },
+          "goal": "小茜需要跟 Robby 確認死亡細節，再去面對家屬",
+          "player_role": "xiaoqian",
+          "next_scene": "family_meeting"
+        },
+        {
+          "id": "family_meeting",
+          "location": "waiting_room",
+          "trigger": "after_first_patient",
+          "required_characters": ["xiaoqian", "chen_meizhu"],
+          "context": "小茜第一次獨自面對死亡家屬。陳美珠已經哭過一輪，現在只是坐著。",
+          "goal": "小茜問「他是什麼樣的人」，開始重建陳文雄的一生",
+          "player_role": "xiaoqian",
+          "next_scene": "act1_end"
+        },
+        {
+          "id": "act1_end",
+          "location": "er_corridor",
+          "trigger": "after_family_meeting",
+          "required_characters": ["xiaoqian", "robby"],
+          "context": "小茜推著病床離開，Robby 碰巧看見。",
+          "goal": "留下懸念：Robby 問小茜「你問她什麼？」",
+          "player_role": "xiaoqian",
+          "next_scene": null
+        }
+      ]
+    }
+  }
+}

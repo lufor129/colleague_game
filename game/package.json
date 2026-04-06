@@ -1,0 +1,16 @@
+{
+  "name": "colleague-game",
+  "version": "0.1.0",
+  "description": "台大醫院急診室 - 辦公室對話遊戲 Demo",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.80.1"
+  },
+  "devDependencies": {
+    "vite": "^5.2.0"
+  }
+}

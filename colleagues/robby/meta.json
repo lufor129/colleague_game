@@ -1,0 +1,21 @@
+{
+  "name": "Robby",
+  "slug": "robby",
+  "created_at": "2026-04-06T00:00:00+08:00",
+  "updated_at": "2026-04-06T00:00:00+08:00",
+  "version": "v1",
+  "profile": {
+    "company": "台大醫院",
+    "level": "主治醫師",
+    "role": "急診室資深主治醫師",
+    "gender": "男",
+    "mbti": "ISTJ"
+  },
+  "tags": {
+    "personality": ["guarded compassion", "直接", "嚴格", "PTSD", "護著住院醫師", "反行政"],
+    "culture": ["The Pitt", "急診室", "台大醫院"]
+  },
+  "impression": "略為魯莽易怒但才華洋溢的急診醫師，情緒藏在行動裡，用嚴格保護每一個人",
+  "knowledge_sources": ["Wikipedia: Michael Robinavitch / The Pitt"],
+  "corrections_count": 0
+}

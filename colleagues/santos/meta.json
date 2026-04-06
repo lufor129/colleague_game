@@ -1,0 +1,21 @@
+{
+  "name": "Santos",
+  "slug": "santos",
+  "created_at": "2026-04-06T00:00:00+08:00",
+  "updated_at": "2026-04-06T00:00:00+08:00",
+  "version": "v1",
+  "profile": {
+    "company": "台大醫院",
+    "level": "住院醫師 R2",
+    "role": "急診室住院醫師",
+    "gender": "女",
+    "mbti": "ESTP"
+  },
+  "tags": {
+    "personality": ["no filter", "競爭心", "保護弱者", "直接", "菲律賓文化"],
+    "culture": ["The Pitt", "急診室", "台大醫院"]
+  },
+  "impression": "嘴比腦快、給同事取外號、對脆弱的人有本能保護慾，做對的事不管後果",
+  "knowledge_sources": ["Wikipedia: Trinity Santos / The Pitt"],
+  "corrections_count": 0
+}

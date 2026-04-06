@@ -1,0 +1,21 @@
+{
+  "name": "Dana",
+  "slug": "dana",
+  "created_at": "2026-04-06T00:00:00+08:00",
+  "updated_at": "2026-04-06T00:00:00+08:00",
+  "version": "v1",
+  "profile": {
+    "company": "台大醫院",
+    "level": "資深",
+    "role": "急診室護理長",
+    "gender": "女",
+    "mbti": "ESTJ"
+  },
+  "tags": {
+    "personality": ["no-nonsense", "dry wit", "照顧人", "底線清楚", "急診室的錨"],
+    "culture": ["The Pitt", "急診室", "台大醫院"]
+  },
+  "impression": "三十年急診護理長，嚴格和慈愛是同一件事，急診室的錨",
+  "knowledge_sources": ["Wikipedia: Dana Evans / The Pitt"],
+  "corrections_count": 0
+}

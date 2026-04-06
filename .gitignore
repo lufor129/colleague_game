@@ -1,0 +1,31 @@
+# Dependencies
+game/node_modules/
+
+# Build output
+game/dist/
+
+# Environment & secrets
+.env
+.env.local
+.env.*.local
+*.key
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Logs
+*.log
+npm-debug.log*
+
+# Claude Code skill tools (contains its own git repo)
+.claude/
+
+# Knowledge base (may contain private chat exports)
+colleagues/*/knowledge/
+colleagues/xiaoqian/
