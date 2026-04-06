@@ -3,6 +3,71 @@
  * 顯示 NPC 對話 + 玩家輸入框
  */
 
+export function shouldStopDialogueKeyPropagation(key) {
+  if (!key) return false
+
+  return key === ' ' ||
+    key === 'Enter' ||
+    key.startsWith('Arrow') ||
+    ['w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(key)
+}
+
+export function normalizeDialogueHistory(history, characterName) {
+  return (history ?? []).map((entry) => ({
+    role: entry.speakerId === 'xiaoqian' ? 'player' : 'npc',
+    label: entry.speakerId === 'xiaoqian' ? '你' : characterName,
+    content: entry.content
+  }))
+}
+
+export function appendPlayerTurn(history, content) {
+  return [
+    ...(history ?? []),
+    { role: 'player', label: '你', content }
+  ]
+}
+
+export function appendLoadingTurn(history, characterName) {
+  return [
+    ...(history ?? []),
+    { role: 'npc', label: characterName, content: '⋯', isLoading: true }
+  ]
+}
+
+export function replaceLoadingTurn(history, characterName, content) {
+  const nextHistory = [...(history ?? [])]
+  const loadingIndex = nextHistory.findLastIndex((entry) => entry.isLoading)
+
+  if (loadingIndex === -1) {
+    return [...nextHistory, { role: 'npc', label: characterName, content, isLoading: false }]
+  }
+
+  nextHistory[loadingIndex] = {
+    role: 'npc',
+    label: characterName,
+    content,
+    isLoading: false
+  }
+
+  return nextHistory
+}
+
+export function appendSystemAction(history, content) {
+  return [
+    ...(history ?? []),
+    { role: 'system', label: '系統', content }
+  ]
+}
+
+export function canReleaseMovement(isDialogueVisible, isInputFocused) {
+  if (!isDialogueVisible) return true
+  return !isInputFocused
+}
+
+export function getDialogueLayoutMode(viewportWidth) {
+  return viewportWidth <= 1100 ? 'stacked' : 'split'
+}
+
 export class DialogueBox {
   constructor(scene) {
     this.scene = scene
@@ -10,7 +75,12 @@ export class DialogueBox {
     this.nameText = null
     this.bodyText = null
     this.inputField = null   // HTML input element（覆蓋在 canvas 上）
+    this.historyDom = null
+    this.optionsDom = null
+    this.metaDom = null
+    this.transcript = []
     this.onSubmit = null
+    this.onAdvance = null
     this.isVisible = false
 
     this._createDOM()
@@ -20,17 +90,14 @@ export class DialogueBox {
     // 用 DOM overlay 做輸入框（比 Phaser 內建輸入好用）
     const overlay = document.createElement('div')
     overlay.id = 'dialogue-overlay'
+    overlay.dataset.layoutMode = getDialogueLayoutMode(window.innerWidth)
     overlay.style.cssText = `
-      position: fixed;
-      bottom: 0;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 800px;
-      padding: 0 0 20px 0;
+      width: 100%;
+      height: 100%;
       display: none;
       flex-direction: column;
-      gap: 8px;
-      font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+      gap: 10px;
+      min-height: 0;
     `
 
     // NPC 對話框
@@ -40,32 +107,45 @@ export class DialogueBox {
       background: rgba(10, 10, 30, 0.92);
       border: 2px solid #4a6fa5;
       border-radius: 8px;
-      padding: 12px 16px;
+      padding: 14px 18px;
       color: #e8e8f0;
-      min-height: 80px;
+      min-height: 220px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
     `
 
-    this.nameDom = document.createElement('div')
-    this.nameDom.style.cssText = `
-      color: #7eb8f7;
-      font-size: 13px;
-      font-weight: bold;
-      margin-bottom: 6px;
+    this.historyDom = document.createElement('div')
+    this.historyDom.style.cssText = `
+      flex: 1;
+      min-height: 140px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+      padding-right: 4px;
     `
 
-    this.bodyDom = document.createElement('div')
-    this.bodyDom.style.cssText = `
-      font-size: 15px;
-      line-height: 1.6;
-      white-space: pre-wrap;
+    npcBox.appendChild(this.historyDom)
+
+    this.optionsDom = document.createElement('div')
+    this.optionsDom.style.cssText = `
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
     `
 
-    npcBox.appendChild(this.nameDom)
-    npcBox.appendChild(this.bodyDom)
+    this.metaDom = document.createElement('div')
+    this.metaDom.style.cssText = `
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+    `
 
     // 玩家輸入列
     const inputRow = document.createElement('div')
-    inputRow.style.cssText = `display: flex; gap: 8px;`
+    inputRow.style.cssText = `display: flex; gap: 8px; align-items: stretch;`
 
     this.inputField = document.createElement('input')
     this.inputField.type = 'text'
@@ -103,23 +183,35 @@ export class DialogueBox {
 
     sendBtn.addEventListener('click', handleSend)
     this.inputField.addEventListener('keydown', e => {
+      if (shouldStopDialogueKeyPropagation(e.key)) {
+        e.stopPropagation()
+      }
       if (e.key === 'Enter') handleSend()
+    })
+    this.inputField.addEventListener('keyup', e => {
+      if (shouldStopDialogueKeyPropagation(e.key)) {
+        e.stopPropagation()
+      }
     })
 
     inputRow.appendChild(this.inputField)
     inputRow.appendChild(sendBtn)
 
     overlay.appendChild(npcBox)
+    overlay.appendChild(this.optionsDom)
+    overlay.appendChild(this.metaDom)
     overlay.appendChild(inputRow)
-    document.body.appendChild(overlay)
+    const sidebarRoot = document.getElementById('dialogue-sidebar') ?? document.body
+    sidebarRoot.appendChild(overlay)
 
     this.overlay = overlay
   }
 
   show(characterName) {
     this.overlay.style.display = 'flex'
-    this.nameDom.textContent = characterName
-    this.bodyDom.textContent = '...'
+    this.transcript = []
+    this.renderTranscript()
+    this.optionsDom.innerHTML = ''
     this.isVisible = true
     this.inputField.focus()
   }
@@ -129,17 +221,112 @@ export class DialogueBox {
     this.isVisible = false
   }
 
+  isInputFocused() {
+    return document.activeElement === this.inputField
+  }
+
   setLoading() {
-    this.bodyDom.textContent = '⋯'
+    return undefined
   }
 
   setText(text) {
-    this.bodyDom.textContent = text
+    return text
+  }
+
+  setHistory(history, characterName) {
+    this.transcript = normalizeDialogueHistory(history, characterName)
+    this.renderTranscript()
+  }
+
+  renderTranscript() {
+    this.historyDom.innerHTML = ''
+
+    for (const entry of this.transcript) {
+      const item = document.createElement('div')
+      item.style.cssText = `
+        align-self: ${entry.role === 'player' ? 'flex-end' : 'flex-start'};
+        max-width: 82%;
+        background: ${entry.role === 'player' ? 'rgba(74, 111, 165, 0.42)' : 'rgba(255, 255, 255, 0.06)'};
+        border: 1px solid ${entry.role === 'player' ? 'rgba(126, 184, 247, 0.45)' : 'rgba(255, 255, 255, 0.08)'};
+        border-radius: 10px;
+        padding: 8px 10px;
+      `
+
+      const label = document.createElement('div')
+      label.textContent = entry.label
+      label.style.cssText = `
+        font-size: 11px;
+        color: ${entry.role === 'player' ? '#bcd8ff' : '#aab3c7'};
+        margin-bottom: 4px;
+      `
+
+      const body = document.createElement('div')
+      body.textContent = entry.content
+      body.style.cssText = `
+        font-size: 14px;
+        line-height: 1.5;
+        white-space: pre-wrap;
+        opacity: ${entry.isLoading ? 0.7 : 1};
+      `
+
+      item.appendChild(label)
+      item.appendChild(body)
+      this.historyDom.appendChild(item)
+    }
+
+    this.historyDom.scrollTop = this.historyDom.scrollHeight
+  }
+
+  setOptions(options) {
+    this.optionsDom.innerHTML = ''
+
+    for (const option of options ?? []) {
+      const button = document.createElement('button')
+      button.type = 'button'
+      button.textContent = option.label
+      button.style.cssText = `
+        background: rgba(42, 74, 127, 0.85);
+        color: #e8e8f0;
+        border: 1px solid #4a6fa5;
+        border-radius: 999px;
+        padding: 8px 12px;
+        font-size: 13px;
+        cursor: pointer;
+      `
+      button.addEventListener('click', () => {
+        if (this.onSubmit) {
+          this.onSubmit(option.text)
+        }
+      })
+      this.optionsDom.appendChild(button)
+    }
+  }
+
+  setAdvanceAction(enabled) {
+    this.metaDom.innerHTML = ''
+    if (!enabled) return
+
+    const button = document.createElement('button')
+    button.type = 'button'
+    button.textContent = '繼續主線'
+    button.style.cssText = `
+      background: rgba(126, 184, 247, 0.12);
+      color: #bcd8ff;
+      border: 1px solid rgba(126, 184, 247, 0.45);
+      border-radius: 999px;
+      padding: 7px 12px;
+      font-size: 12px;
+      cursor: pointer;
+    `
+    button.addEventListener('click', () => {
+      if (this.onAdvance) this.onAdvance()
+    })
+    this.metaDom.appendChild(button)
   }
 
   setError(msg) {
-    this.bodyDom.textContent = `[錯誤：${msg}]`
-    this.bodyDom.style.color = '#ff6b6b'
+    this.transcript = replaceLoadingTurn(this.transcript, '系統', `[錯誤：${msg}]`)
+    this.renderTranscript()
   }
 
   destroy() {

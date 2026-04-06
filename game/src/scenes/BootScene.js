@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 
 /**
- * BootScene — 啟動畫面，讓玩家輸入 Anthropic API Key
+ * BootScene — 啟動畫面，讓玩家輸入 MiniMax API Key
  * Demo 用，正式版應改成後端 proxy
  */
 export class BootScene extends Phaser.Scene {
@@ -38,12 +38,12 @@ export class BootScene extends Phaser.Scene {
     `
 
     const label = document.createElement('div')
-    label.textContent = '請輸入 Anthropic API Key'
+    label.textContent = '請輸入 MiniMax API Key'
     label.style.cssText = `color: #aaaacc; font-size: 13px; font-family: sans-serif;`
 
     const input = document.createElement('input')
     input.type = 'password'
-    input.placeholder = 'sk-ant-...'
+    input.placeholder = '輸入 MiniMax API Key'
     input.style.cssText = `
       background: rgba(10, 10, 30, 0.85);
       border: 1px solid #4a6fa5;
@@ -69,12 +69,12 @@ export class BootScene extends Phaser.Scene {
     `
 
     const note = document.createElement('div')
-    note.textContent = 'API Key 僅存於本機記憶體，不會上傳'
+    note.textContent = 'API Key 僅存於本機記憶體，透過本地 proxy 呼叫 MiniMax'
     note.style.cssText = `color: #555577; font-size: 11px; font-family: sans-serif;`
 
     const start = () => {
       const key = input.value.trim()
-      if (!key.startsWith('sk-ant-') && !key.startsWith('sk-')) {
+      if (!key) {
         input.style.borderColor = '#ff6b6b'
         return
       }

@@ -1,6 +1,80 @@
 /**
- * DialogueEngine — 串接 Claude API，根據角色 persona + 場景狀態生成對話
+ * DialogueEngine — 串接 MiniMax Anthropic-compatible API，根據角色 persona + 場景狀態生成對話
  */
+
+export function getDialogueApiUrl() {
+  return '/api/minimax/anthropic/v1/messages'
+}
+
+export function getDialogueModel() {
+  return 'MiniMax-M2.7'
+}
+
+function buildXiaoqianOptionText(optionId) {
+  const optionTextMap = {
+    intro_self: '你好，我是小茜啦，今天來協助後續處理，可以先跟我說一下狀況嗎？',
+    ask_case: '今天這案子是怎樣？我先跟哪一段比較不母湯？',
+    ask_role: '你現在卡在哪一段？我先接哪裡比較順？',
+    ask_death_time: '我先確認一下死亡時間跟送進來時的狀況，這樣比較不會亂掉。',
+    ask_family_status: '家屬現在在哪裡？有人先陪著她嗎？我等等直接去會不會太硬？',
+    ask_next_step: '我接下來先找誰比較有效率？不然我怕流程母湯。',
+    ask_father_personality: '我想知道一下，妳爸爸平常是什麼樣的人？我想先把他這個人拼回來。',
+    ask_last_meal: '妳上次跟爸爸一起吃飯是什麼時候？他那天看起來和平常一樣嗎？',
+    ask_daily_life: '如果要妳形容他平常的日子，妳第一個想到的是什麼？',
+    answer_directly: '我問她，妳爸爸是什麼樣的人。就是這個問題。',
+    answer_deflect: '蛤，你怎麼突然在意這個？你是想知道我問了什麼，還是你其實也想知道她怎麼回答？',
+    answer_reflect: '她剛剛不是在講死亡，她是在努力把爸爸想回來。這差很多。'
+  }
+
+  return optionTextMap[optionId] ?? '你可以再多跟我說一點嗎？'
+}
+
+export function getSuggestedPromptOptions(sceneOptions, history) {
+  const playerLines = new Set(
+    (history ?? [])
+      .filter((entry) => entry.speakerId === 'xiaoqian')
+      .map((entry) => entry.content)
+  )
+
+  const rewrittenSceneOptions = (sceneOptions ?? []).map((option) => ({
+    ...option,
+    text: buildXiaoqianOptionText(option.id)
+  }))
+
+  const unusedOptions = rewrittenSceneOptions.filter((option) => !playerLines.has(option.text))
+  const defaults = [
+    { id: 'followup_detail', label: '追問更多細節', text: '你可以再多跟我說一點嗎？我想把前後拼完整。' },
+    { id: 'followup_feeling', label: '問對方當時狀態', text: '那個時候你人是什麼感覺？我怕我只記到事情，沒記到人。' },
+    { id: 'followup_important', label: '問最重要的記憶', text: '如果只能留一件事，妳最想讓我知道什麼？' }
+  ]
+
+  return [...unusedOptions, ...defaults].slice(0, 3)
+}
+
+export function canManuallyAdvanceScene(history, nextSceneId) {
+  if (!nextSceneId) return false
+  return (history ?? []).some((entry) => entry.speakerId !== 'xiaoqian')
+}
+
+export function extractTextReply(data) {
+  const blocks = Array.isArray(data?.content) ? data.content : []
+  const textBlock = blocks.find((block) => block?.type === 'text' && typeof block.text === 'string')
+
+  if (!textBlock) {
+    throw new Error('Dialogue API error: response did not include text content')
+  }
+
+  return textBlock.text
+}
+
+export function extractSceneCompletion(reply, nextSceneId) {
+  const completed = reply.includes('[SCENE_COMPLETE]')
+  return {
+    reply: reply.replace(/\s*\[SCENE_COMPLETE\]\s*/g, '').trim(),
+    completed,
+    nextSceneId: completed ? nextSceneId ?? null : null
+  }
+}
 
 // 各角色的核心性格摘要（從 persona.md 精簡而來，控制 token 消耗）
 const PERSONA_PROMPTS = {
@@ -37,8 +111,9 @@ const PERSONA_PROMPTS = {
 說話：疲憊、偶爾語句不完整、對陌生人的問題會遲疑一下才回答。`
 }
 
-export class DialogueEngine {
+export class DialogueEngine extends EventTarget {
   constructor(apiKey) {
+    super()
     this.apiKey = apiKey
     this.history = []       // { role, characterId, content }[]
     this.currentScene = null
@@ -71,7 +146,8 @@ export class DialogueEngine {
 2. 一次只說一小段（2-4 句），像 LINE 訊息不是作文
 3. 嚴格保持你的說話風格和口頭禪
 4. 不要解釋自己的情緒，把情緒放在行動和停頓裡
-5. 不要離開角色`
+5. 不要離開角色
+6. 如果這段對話已經完成目前場景目標，請在回應最後加上 [SCENE_COMPLETE]`
 
     // 建立對話 messages
     const messages = this.history.map(h => ({
@@ -80,7 +156,7 @@ export class DialogueEngine {
     }))
     messages.push({ role: 'user', content: playerInput })
 
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
+    const response = await fetch(getDialogueApiUrl(), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -88,7 +164,7 @@ export class DialogueEngine {
         'anthropic-version': '2023-06-01'
       },
       body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
+        model: getDialogueModel(),
         max_tokens: 300,
         system: systemPrompt,
         messages
@@ -97,25 +173,42 @@ export class DialogueEngine {
 
     if (!response.ok) {
       const err = await response.json()
-      throw new Error(`Claude API error: ${err.error?.message}`)
+      throw new Error(`Dialogue API error: ${err.error?.message}`)
     }
 
     const data = await response.json()
-    const reply = data.content[0].text
+    const rawReply = extractTextReply(data)
+    const parsedReply = extractSceneCompletion(
+      rawReply,
+      this.currentScene?.next_scene
+    )
 
     // 存入歷史
-    this.history.push({ speakerId: listenerCharId, content: playerInput })
-    this.history.push({ speakerId: speakerCharId, content: reply })
+    this.recordExchange(listenerCharId, playerInput)
+    this.recordExchange(speakerCharId, parsedReply.reply)
+
+    if (parsedReply.completed) {
+      // Let the UI render the final line before the scene starts fading out.
+      setTimeout(() => {
+        this.dispatchEvent(new CustomEvent('sceneComplete', {
+          detail: { nextSceneId: parsedReply.nextSceneId }
+        }))
+      }, 600)
+    }
+
+    return parsedReply.reply
+  }
+
+  clearHistory() {
+    this.history = []
+  }
+
+  recordExchange(speakerId, content) {
+    this.history.push({ speakerId, content })
 
     // 只保留最近 10 輪對話，避免 token 爆炸
     if (this.history.length > 20) {
       this.history = this.history.slice(-20)
     }
-
-    return reply
-  }
-
-  clearHistory() {
-    this.history = []
   }
 }

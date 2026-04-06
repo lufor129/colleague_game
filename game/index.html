@@ -8,20 +8,77 @@
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       background: #1a1a2e;
+      min-height: 100vh;
+      overflow: hidden;
+      font-family: 'Noto Sans TC', 'Microsoft JhengHei', sans-serif;
+    }
+    #app-shell {
+      display: grid;
+      grid-template-columns: 380px minmax(0, 1fr);
+      width: 100vw;
+      height: 100vh;
+    }
+    #dialogue-sidebar {
+      background:
+        linear-gradient(180deg, rgba(20, 24, 42, 0.98), rgba(13, 16, 29, 0.98)),
+        #12182a;
+      border-right: 1px solid rgba(126, 184, 247, 0.18);
+      padding: 20px 18px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    #game-pane {
       display: flex;
       justify-content: center;
       align-items: center;
-      height: 100vh;
-      overflow: hidden;
+      padding: 24px;
+      background:
+        radial-gradient(circle at top right, rgba(126, 184, 247, 0.12), transparent 30%),
+        #1a1a2e;
+    }
+    #game-container {
+      width: 800px;
+      height: 600px;
+      max-width: 100%;
+      max-height: 100%;
+      border: 1px solid rgba(126, 184, 247, 0.16);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
     }
     #game-container canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
       image-rendering: pixelated;
       image-rendering: crisp-edges;
+    }
+    @media (max-width: 1100px) {
+      body {
+        overflow: auto;
+      }
+      #app-shell {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+        min-height: 100vh;
+      }
+      #dialogue-sidebar {
+        border-right: none;
+        border-bottom: 1px solid rgba(126, 184, 247, 0.18);
+        min-height: 320px;
+      }
+      #game-pane {
+        padding: 16px;
+      }
     }
   </style>
 </head>
 <body>
-  <div id="game-container"></div>
+  <div id="app-shell">
+    <aside id="dialogue-sidebar"></aside>
+    <main id="game-pane">
+      <div id="game-container"></div>
+    </main>
+  </div>
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

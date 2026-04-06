@@ -1,89 +1,126 @@
-# 台大醫院急診室 — 辦公室對話遊戲 Demo
+# 台大醫院急診室
 
-像素風格的辦公室敘事遊戲。玩家扮演法醫實習生小茜，在台大醫院急診室與 NPC 互動，幫助死亡病患的家屬回顧他們的一生。NPC 對話由 Claude API 即時生成，每位角色有完整的性格設定（persona）。
+像素風格的敘事對話遊戲 Demo。玩家扮演法醫實習生小茜，在台大醫院急診室裡與醫護角色和家屬互動，透過對話逐步回顧死者的一生。
 
----
+這個專案目前是「可玩的 AI 敘事遊戲原型」：已經有 Act 1 劇情流程、角色 persona、場景切換、聊天式對話介面，以及用 MiniMax API 驅動的 NPC 即時回應。
+
+## Demo
+
+![雙欄對話與遊戲主畫面](PNG/截圖%202026-04-06%2011.49.06.png)
+
+![聊天式對話欄與劇情互動](PNG/截圖%202026-04-06%2011.52.23.png)
+
+## 專案特色
+
+- 小茜、Robby、Dana、陳美珠等角色都有獨立 persona 設定
+- 對話採用聊天視窗形式，支援歷史訊息、讀取動畫、自由輸入
+- 左側固定對話欄，右側保留完整遊戲畫面，避免遮擋主畫面
+- 提供符合小茜個性的動態劇情選項，同時保留玩家自由輸入
+- 已有 Act 1 場景切換：`arrival -> first_patient -> family_meeting -> act1_end`
+- 內建手動 `繼續主線` fallback，避免劇情卡死
 
 ## 世界觀
 
-地點：台大醫院急診室  
-劇情原型：改編自美劇 *The Pitt*，移植至台灣場景
+地點是台大醫院急診室，劇情原型改編自 *The Pitt* 並移植到台灣場景。
 
-**核心敘事張力：**  
-Robby 是急診主治醫師，職責是救人、往前看。  
-小茜是法醫實習生，職責是替死者回顧、往後看。  
-他們都會問家屬「他是什麼樣的人」——但原因相反。
+核心敘事張力是：
 
----
+- Robby 是急診主治醫師，職責是救人、往前看
+- 小茜是法醫實習生，職責是替死者回顧、往後看
+- 他們都會問家屬「他是什麼樣的人」，但理由完全不同
 
-## 角色設定
+## 角色資料
 
-所有角色 persona 放在 `colleagues/{slug}/` 目錄下，分為三個檔案：
+所有角色資料都放在 `colleagues/{slug}/`。
 
-| 角色 | slug | 身份 | persona.md |
-|------|------|------|------------|
-| 小茜（子茜） | xiaoqian | 台大醫學院博士生，法醫實習生，玩家角色 | ✅ |
-| Robby | robby | 急診室資深主治醫師，PTSD，嘴硬心軟 | ✅ |
-| Dana | dana | 護理長，30年資歷，急診室的錨 | ✅ |
-| Santos | santos | R2 住院醫師，菲律賓人，無濾網直接 | ✅ |
-| Whitaker | whitaker | R1 住院醫師，內布拉斯加農場長大，自我懷疑 | ✅ |
+目前已建立：
 
-### 角色關係網（重要，影響對話生成）
+- `xiaoqian`
+- `robby`
+- `dana`
+- `santos`
+- `whitaker`
 
-```
-Robby ←────────── 30年老戰友 ──────────→ Dana
-  │  嚴格=在乎 (Adamson投影)             │ busting chops=信任
-  ↓                                      ↓
-Whitaker ←──── 室友/都有傷未說 ────→ Santos
-  │         (Huckleberry外號)             │
-  └──────── 小茜（局外人視角，帶來Robby不想面對的問題）────┘
-```
+每位角色至少有：
 
-每個角色在 `Layer 4` 都有對其他每位角色的具體互動規則，以及 **「你沒說的」** 內心獨白（供 AI 生成對話時使用）。
+- `persona.md`：5 層人格與說話風格
+- `work.md`：工作能力設定
+- `SKILL.md`：給 LLM 使用的整合版設定
 
----
+## 目前玩法
+
+啟動遊戲後：
+
+1. 輸入 MiniMax API Key
+2. 進入急診室場景
+3. 用 `WASD` / 方向鍵移動
+4. 靠近 NPC 按 `E` 對話
+5. 在左側聊天欄中：
+   - 點選動態劇情選項
+   - 或自由輸入台詞
+6. 若模型沒有自動推進劇情，可按 `繼續主線`
+
+補充：
+
+- 對話框開著但沒有在輸入時，仍可繼續移動角色
+- `ESC` 可關閉對話欄
+
+## Demo 劇情
+
+目前實作的是 Act 1：第一個病人。
+
+場景流程：
+
+- `arrival`：小茜第一次進入急診室，和 Robby 碰面
+- `first_patient`：確認死亡病患陳文雄的基本資訊
+- `family_meeting`：小茜與女兒陳美珠對話
+- `act1_end`：Robby 問小茜「你問她什麼？」
+
+第一位病患設定：
+
+- 姓名：陳文雄
+- 年齡：65
+- 身分：退休國小老師
+- 死因：心肌梗塞
+- 家屬：女兒陳美珠
 
 ## 技術架構
 
-```
+### 遊戲端
+
+- `Phaser.js 3`
+- `Vite`
+- DOM-based 對話 UI
+
+### 對話端
+
+- `MiniMax-M2.7`
+- 採用 MiniMax 的 Anthropic-compatible API
+- 透過 Vite dev proxy 呼叫本地路徑：
+  - `/api/minimax/anthropic/v1/messages`
+
+### 專案結構
+
+```text
 colleague_game/
-├── README.md               ← 本文件
-├── IMPLEMENTATION.md       ← 開發細節（見下方）
-├── colleagues/             ← 角色 persona 資料庫
-│   ├── xiaoqian/
-│   │   ├── persona.md      ← 5層性格設定
-│   │   ├── work.md         ← 工作能力設定
-│   │   └── SKILL.md        ← 合併版（供 Claude 呼叫）
-│   ├── robby/
-│   ├── dana/
-│   ├── santos/
-│   └── whitaker/
-└── game/                   ← Phaser.js 遊戲本體
+├── README.md
+├── IMPLEMENTATION.md
+├── PNG/
+├── colleagues/
+└── game/
     ├── index.html
     ├── package.json
     ├── vite.config.js
     └── src/
         ├── main.js
         ├── scenes/
-        │   ├── BootScene.js    ← 啟動畫面（API Key 輸入）
-        │   └── ERScene.js      ← 急診室場景
+        │   ├── BootScene.js
+        │   ├── ERScene.js
+        │   └── sceneConfig.js
         └── dialogue/
-            ├── DialogueEngine.js   ← Claude API 串接核心
-            ├── DialogueBox.js      ← 對話框 DOM UI
-            └── story.json          ← 劇情狀態機
+            ├── DialogueEngine.js
+            └── DialogueBox.js
 ```
-
-### 技術選型
-
-| 項目 | 選擇 | 原因 |
-|------|------|------|
-| 遊戲引擎 | Phaser.js 3 | JavaScript，AI 生成程式碼品質高，無需學習新語言 |
-| 建構工具 | Vite | 快速 HMR，ES module 支援 |
-| 對話生成 | Claude API (claude-haiku-4-5) | 低延遲，token 效率高，適合即時對話 |
-| 美術（目標） | Tiled + 像素 sprite | 標準像素遊戲工作流 |
-| 美術（現況） | 純色方塊佔位 | 先跑通邏輯再補美術 |
-
----
 
 ## 快速啟動
 
@@ -91,36 +128,49 @@ colleague_game/
 cd game
 npm install
 npm run dev
-# 開啟 http://localhost:3000
-# 輸入 Anthropic API Key（sk-ant-...）進入遊戲
 ```
 
-操作：
-- `WASD` / 方向鍵移動
-- 靠近 NPC 按 `E` 開始對話
-- 在輸入框輸入台詞，Claude 即時生成 NPC 回應
-- `ESC` 關閉對話框
+然後開啟：
 
----
+```text
+http://localhost:3000
+```
 
-## Demo 劇情大綱（Act 1）
+進入遊戲後輸入 MiniMax API Key 即可。
 
-| 場景 ID | 地點 | 觸發條件 | 目標 |
-|---------|------|---------|------|
-| `arrival` | 急診室入口 | 遊戲開始 | 小茜與 Robby 第一次碰面，建立世界觀 |
-| `first_patient` | 急診走廊 | 離開入口 | Dana 告知案件：陳文雄（65歲，心肌梗塞）；小茜向 Robby 確認死亡細節 |
-| `family_meeting` | 等候室 | 確認細節後 | 小茜獨自面對女兒陳美珠，問「他是什麼樣的人」 |
-| `act1_end` | 急診走廊 | 會談結束 | Robby 碰見小茜，問「你問她什麼？」——留下懸念 |
+## 測試與建置
 
-### 第一位死亡病患
+```bash
+cd game
+npm test -- --run
+npm run build
+```
 
-**陳文雄**，65歲，退休國小老師  
-死因：心肌梗塞  
-背景：獨居，每天晨跑，被鄰居發現倒在公園  
-家屬：女兒陳美珠（38歲），上個月才回家吃飯
+## 目前狀態
 
----
+目前這個專案已經具備：
 
-## 尚未完成的功能（Codex 接手清單）
+- 可遊玩的 AI 對話原型
+- 左右雙欄 UI
+- 聊天式對話體驗
+- 動態選項 + 自由輸入
+- 基礎劇情推進
 
-詳見 `IMPLEMENTATION.md`
+但它仍然是 Demo，還沒有完成：
+
+- 正式像素美術
+- 更多案件 / 更多章節
+- 更穩定的自動劇情推進條件
+- 生產環境後端代理
+
+## 已知限制
+
+- 目前仍依賴模型輸出與對話內容來輔助劇情推進
+- 生產環境不能只靠 Vite proxy，之後需要正式後端
+- 前端 bundle 仍偏大，build 會出現 chunk size warning
+
+## 開發補充
+
+更細的開發狀態、接手筆記與待辦清單在：
+
+- [IMPLEMENTATION.md](IMPLEMENTATION.md)
